@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -640,7 +640,6 @@
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
 <div id="loading-screen">
   <div class="loading-logo-wrap">
     <div class="loading-logo-ring">
@@ -657,7 +656,6 @@
   </div>
 </div>
 
-<!-- NAVBAR -->
 <nav id="navbar">
   <div class="nav-inner">
     <a href="#" class="nav-brand">
@@ -687,7 +685,6 @@
   </div>
 </nav>
 
-<!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
   <a href="#beranda" onclick="toggleMenu()">Beranda</a>
   <a href="#berita" onclick="toggleMenu()">Berita</a>
@@ -696,7 +693,6 @@
   <a href="#pengurus" onclick="toggleMenu()">Pengurus MPK</a>
 </div>
 
-<!-- HERO -->
 <section class="hero" id="beranda">
   <div class="hero-bg"></div>
   <div class="hero-pattern"></div>
@@ -722,7 +718,6 @@
   </div>
 </section>
 
-<!-- STATS -->
 <div class="stats-bar" id="stats-bar">
   <div class="stats-inner">
     <div class="stat-item reveal">
@@ -744,7 +739,6 @@
   </div>
 </div>
 
-<!-- BERITA SECTION -->
 <section id="berita">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -758,7 +752,6 @@
   </div>
 </section>
 
-<!-- KEGIATAN SECTION -->
 <section id="kegiatan" class="kegiatan-section">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -772,7 +765,6 @@
   </div>
 </section>
 
-<!-- EKSKUL SECTION -->
 <section id="ekskul" style="background: var(--bg);">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -786,7 +778,6 @@
   </div>
 </section>
 
-<!-- VISI MISI -->
 <section class="visi-misi-section" id="visi-misi">
   <div class="section-inner">
     <div class="visi-misi-grid">
@@ -804,7 +795,6 @@
   </div>
 </section>
 
-<!-- PENGURUS SECTION -->
 <section id="pengurus" class="pengurus-section">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -818,7 +808,6 @@
   </div>
 </section>
 
-<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
     <div class="footer-brand">
@@ -857,7 +846,6 @@
   </div>
 </footer>
 
-<!-- MODAL BERITA -->
 <div class="modal-overlay" id="beritaModal">
   <div class="modal">
     <div class="modal-header">
@@ -868,12 +856,14 @@
     <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
+
 <script>
 // ===== GLOBAL DATA =====
 let appData = null;
 
 // ===== LOADING SCREEN =====
 window.addEventListener('load', () => {
+  initReveal(); // Memicu animasi scroll reveal saat pertama kali dimuat
   loadData()
     .then(() => {
       tutupLoadingScreen();
@@ -921,45 +911,60 @@ const API_URL = 'https://mpk-backend-production.up.railway.app/api/data';
 
 async function loadData() {
   try {
-    const response = await fetch(API_URL);
-    
-    // Cek apakah server mengembalikan status sukses (200 OK)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    const response = await fetch('https://mpk-backend-production.up.railway.app/api/data?t=' + Date.now());
     const data = await response.json();
     
-    if (data) {
-      appData = data;
-    } else {
-      console.warn('Database kosong, menggunakan mode demo.');
-      renderDemo();
-    }
+    // Pastikan appData terisi
+    appData = data;
 
-    // Render dengan pengaman || [] untuk mencegah error jika array kosong
+    // Render semua komponen
     applySettings(appData.pengaturan || {});
     renderBerita(appData.berita || []);
     renderKegiatan(appData.kegiatan || []);
     renderPengurus(appData.pengurus || []);
     renderEkskulList(appData.ekskul || []); 
-    updateStats(appData);
-    initReveal();
-
-  } catch(e) {
-    console.error('Error memuat data dari server:', e);
-    renderDemo(); // Gunakan data demo jika API mati/error
     
-    // Tampilkan data demo ke layar
-    applySettings(appData.pengaturan || {});
-    renderBerita(appData.berita || []);
-    renderKegiatan(appData.kegiatan || []);
-    renderPengurus(appData.pengurus || []);
-    renderEkskulList(appData.ekskul || []); 
-    updateStats(appData);
-    initReveal();
+    // Tutup loading screen setelah data berhasil di-render
+    const ls = document.getElementById('loading-screen');
+    if (ls) {
+      ls.classList.add('hide');
+      setTimeout(() => ls.remove(), 700);
+    }
+  } catch(e) {
+    console.error('Error memuat data:', e);
+    // Jika server error, paksa hilangkan loading agar user tidak stuck
+    const ls = document.getElementById('loading-screen');
+    if (ls) ls.classList.add('hide');
   }
 }
+
+// ===== APPLY SETTINGS & STATS =====
+function applySettings(settings) {
+  // Update Teks Dinamis
+  if (settings.tahunAjaran) document.getElementById('hero-tahun').textContent = settings.tahunAjaran;
+  if (settings.namaSekolah) document.getElementById('hero-school').textContent = settings.namaSekolah;
+  if (settings.misi) document.getElementById('vm-misi').textContent = settings.misi;
+  
+  if (settings.visi) {
+    document.getElementById('hero-visi').textContent = settings.visi;
+    document.getElementById('vm-visi').textContent = settings.visi;
+    document.getElementById('footer-visi').textContent = settings.visi;
+  }
+
+  // Update Angka Statistik (Menghitung panjang array dari API)
+  const countPengurus = appData.pengurus ? appData.pengurus.length : 0;
+  const countBerita = appData.berita ? appData.berita.length : 0;
+  const countKegiatan = appData.kegiatan ? appData.kegiatan.length : 0;
+  
+  const elPengurus = document.getElementById('stat-pengurus');
+  const elBerita = document.getElementById('stat-berita');
+  const elKegiatan = document.getElementById('stat-kegiatan');
+  
+  if (elPengurus) elPengurus.textContent = countPengurus;
+  if (elBerita) elBerita.textContent = countBerita;
+  if (elKegiatan) elKegiatan.textContent = countKegiatan;
+}
+
 // ===== BERITA =====
 function renderBerita(berita) {
   const container = document.getElementById('berita-container');
@@ -1060,6 +1065,11 @@ function renderEkskulList(ekskul) {
   const container = document.getElementById('ekskul-container');
   if (!container) return; 
   
+  if (!ekskul || ekskul.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-basketball-ball"></i><p>Belum ada data ekskul.</p></div>`;
+    return;
+  }
+
   container.innerHTML = ekskul.map((e, i) => `
     <div class="berita-card reveal reveal-delay-${i % 3}" style="padding: 24px;">
       <h3 style="font-family:'Playfair Display', serif; color:var(--text); margin-bottom:12px; font-size: 1.2rem;">
@@ -1074,6 +1084,28 @@ function renderEkskulList(ekskul) {
   `).join('');
 }
 
+// ===== PENGURUS =====
+function renderPengurus(pengurus) {
+  const container = document.getElementById('pengurus-container');
+  if (!container) return;
+  
+  if (!pengurus || pengurus.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-users-slash"></i><p>Belum ada data pengurus.</p></div>`;
+    return;
+  }
+  
+  container.innerHTML = pengurus.map((p, i) => `
+    <div class="pengurus-card reveal reveal-delay-${i % 4}">
+      <div class="pengurus-avatar">
+        ${p.gambar ? `<img src="${p.gambar}" alt="${p.nama}">` : `<i class="fas fa-user"></i>`}
+      </div>
+      <div class="pengurus-nama">${p.nama}</div>
+      <div class="pengurus-jabatan">${p.jabatan}</div>
+      <div class="pengurus-kelas">${p.kelas}</div>
+      ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace('@','')}" target="_blank" class="pengurus-ig"><i class="fab fa-instagram"></i> ${p.instagram}</a>` : ''}
+    </div>
+  `).join('');
+}
 
 // ===== DEMO MODE =====
 function renderDemo() {
