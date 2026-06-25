@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="dark">
+<html lang="id" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -640,6 +640,7 @@
 </head>
 <body>
 
+<!-- LOADING SCREEN -->
 <div id="loading-screen">
   <div class="loading-logo-wrap">
     <div class="loading-logo-ring">
@@ -656,6 +657,7 @@
   </div>
 </div>
 
+<!-- NAVBAR -->
 <nav id="navbar">
   <div class="nav-inner">
     <a href="#" class="nav-brand">
@@ -685,6 +687,7 @@
   </div>
 </nav>
 
+<!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu">
   <a href="#beranda" onclick="toggleMenu()">Beranda</a>
   <a href="#berita" onclick="toggleMenu()">Berita</a>
@@ -693,6 +696,7 @@
   <a href="#pengurus" onclick="toggleMenu()">Pengurus MPK</a>
 </div>
 
+<!-- HERO -->
 <section class="hero" id="beranda">
   <div class="hero-bg"></div>
   <div class="hero-pattern"></div>
@@ -718,6 +722,7 @@
   </div>
 </section>
 
+<!-- STATS -->
 <div class="stats-bar" id="stats-bar">
   <div class="stats-inner">
     <div class="stat-item reveal">
@@ -739,6 +744,7 @@
   </div>
 </div>
 
+<!-- BERITA SECTION -->
 <section id="berita">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -752,6 +758,7 @@
   </div>
 </section>
 
+<!-- KEGIATAN SECTION -->
 <section id="kegiatan" class="kegiatan-section">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -765,6 +772,7 @@
   </div>
 </section>
 
+<!-- EKSKUL SECTION -->
 <section id="ekskul" style="background: var(--bg);">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -778,6 +786,7 @@
   </div>
 </section>
 
+<!-- VISI MISI -->
 <section class="visi-misi-section" id="visi-misi">
   <div class="section-inner">
     <div class="visi-misi-grid">
@@ -795,6 +804,7 @@
   </div>
 </section>
 
+<!-- PENGURUS SECTION -->
 <section id="pengurus" class="pengurus-section">
   <div class="section-inner">
     <div class="section-header reveal">
@@ -808,6 +818,7 @@
   </div>
 </section>
 
+<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
     <div class="footer-brand">
@@ -846,6 +857,7 @@
   </div>
 </footer>
 
+<!-- MODAL BERITA -->
 <div class="modal-overlay" id="beritaModal">
   <div class="modal">
     <div class="modal-header">
@@ -863,7 +875,7 @@ let appData = null;
 
 // ===== LOADING SCREEN =====
 window.addEventListener('load', () => {
-  initReveal(); // Memicu animasi scroll reveal saat pertama kali dimuat
+  // Hanya panggil loadData di sini. initReveal pindah ke dalam loadData()
   loadData()
     .then(() => {
       tutupLoadingScreen();
@@ -923,6 +935,9 @@ async function loadData() {
     renderKegiatan(appData.kegiatan || []);
     renderPengurus(appData.pengurus || []);
     renderEkskulList(appData.ekskul || []); 
+    
+    // === FIX ANIMASI SCROLL: Panggil di sini, SETELAH elemen dirender ke HTML ===
+    initReveal(); 
     
     // Tutup loading screen setelah data berhasil di-render
     const ls = document.getElementById('loading-screen');
