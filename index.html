@@ -905,10 +905,9 @@ function updateThemeIcon(theme) {
   const icon = document.getElementById('themeIcon');
   if (icon) icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
 }
-
-// ===== LOAD DATA (INTEGRASI 1 PANEL ADMIN via LOCALSTORAGE) =====
 // ===== KONEKSI KE BACKEND API =====
-const API_URL = 'https://mpk-backend-production.up.railway.app';
+// WAJIB ADA /api/data DI UJUNGNYA
+const API_URL = 'https://mpk-backend-production.up.railway.app/api/data';
 
 async function loadData() {
   try {
@@ -922,6 +921,7 @@ async function loadData() {
       renderDemo();
     }
 
+    // Eksekusi fungsi render untuk menghilangkan animasi muter
     applySettings(appData.pengaturan);
     renderBerita(appData.berita);
     renderKegiatan(appData.kegiatan);
@@ -933,10 +933,17 @@ async function loadData() {
   } catch(e) {
     console.error('Error memuat data dari server:', e);
     renderDemo(); // Gunakan demo jika server mati
+    
+    // TAMPILKAN KE LAYAR AGAR TIDAK MUTER TERUS
+    applySettings(appData.pengaturan);
+    renderBerita(appData.berita);
+    renderKegiatan(appData.kegiatan);
+    renderPengurus(appData.pengurus);
+    renderEkskulList(appData.ekskul || []); 
+    updateStats(appData);
     initReveal();
   }
 }
-
 // ===== BERITA =====
 function renderBerita(berita) {
   const container = document.getElementById('berita-container');
