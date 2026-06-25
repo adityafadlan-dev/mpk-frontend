@@ -704,7 +704,7 @@ async function fetchAdminData() {
     if (data) {
       adminData = data;
     } else {
-      adminData = defaultData; // Gunakan default jika DB kosong
+      adminData = defaultData; 
     }
   } catch (error) {
     console.error("Gagal mengambil data dari server:", error);
@@ -713,7 +713,7 @@ async function fetchAdminData() {
   }
 }
 
-// Menyimpan data ke server (menggantikan updateLocalDb lama)
+// Menyimpan data ke server
 async function updateLocalDb() {
   try {
     await fetch(API_URL, {
@@ -724,6 +724,7 @@ async function updateLocalDb() {
   } catch (error) {
     console.error("Gagal menyimpan ke server:", error);
     toast('Gagal menyimpan ke database!', 'error');
+    throw error; // Lemparkan error agar tertangkap oleh fungsi yang memanggilnya
   }
 }
 
@@ -749,9 +750,8 @@ async function showAdmin() {
   document.getElementById('loginScreen').classList.add('hide');
   setTimeout(() => { document.getElementById('loginScreen').style.display = 'none'; }, 500);
   
-  // Tampilkan loading data
   document.getElementById('pageTitle').textContent = 'Memuat Data...';
-  await fetchAdminData(); // TUNGGU DATA DARI SERVER
+  await fetchAdminData(); 
   
   document.getElementById('adminLayout').style.display = 'flex';
   document.getElementById('pageTitle').textContent = 'Dashboard';
@@ -785,9 +785,7 @@ function switchPanel(name) {
   document.getElementById('pageTitle').textContent = panelTitles[name] || name;
 }
 
-function openModal(type) {
-  document.getElementById(`modal${capitalize(type)}`).classList.add('open');
-}
+function openModal(type) { document.getElementById(`modal${capitalize(type)}`).classList.add('open'); }
 function closeModal(type) {
   document.getElementById(`modal${capitalize(type)}`).classList.remove('open');
   if(type === 'berita') clearBeritaForm();
@@ -817,7 +815,7 @@ function renderDashboard() {
       </div>`).join('');
 }
 
-// ===== CORE MANAGEMENT SCRIPTS (BERITA, KEGIATAN, PENGURUS) =====
+// ===== BERITA =====
 function renderBeritaTable() {
   document.getElementById('berita-tbody').innerHTML = adminData.berita.map(b => `
     <tr>
@@ -831,21 +829,46 @@ function renderBeritaTable() {
     </tr>`).join('');
 }
 function clearBeritaForm() { document.getElementById('beritaEditId').value=''; document.getElementById('b-judul').value=''; document.getElementById('b-tanggal').value=''; document.getElementById('b-isi').value=''; document.getElementById('modalBeritaTitle').textContent='Tambah Berita'; }
-function saveBerita() {
+
+async function saveBerita() {
   const eid = document.getElementById('beritaEditId').value;
-  const item = { id: eid ? parseInt(eid) : Date.now(), judul: document.getElementById('b-judul').value, kategori: document.getElementById('b-kategori').value, tanggal: document.getElementById('b-tanggal').value || new Date().toISOString().split('T')[0], isi: document.getElementById('b-isi').value };
+  const item = { 
+    id: eid ? parseInt(eid) : Date.now(), 
+    judul: document.getElementById('b-judul').value, 
+    kategori: document.getElementById('b-kategori').value, 
+    tanggal: document.getElementById('b-tanggal').value || new Date().toISOString().split('T')[0], 
+    isi: document.getElementById('b-isi').value 
+  };
+  
   if(!item.judul || !item.isi) return toast('Wajib mengisi semua form!', 'error');
   if(eid) adminData.berita = adminData.berita.map(x => x.id === parseInt(eid) ? item : x);
   else adminData.berita.unshift(item);
-  updateLocalDb(); closeModal('berita'); renderBeritaTable(); renderDashboard(); toast('Berita berhasil disimpan!', 'success');
+  
+  toast('Sedang menyimpan...', 'info');
+  try {
+    await updateLocalDb(); 
+    closeModal('berita'); renderBeritaTable(); renderDashboard(); toast('Berita berhasil disimpan!', 'success');
+  } catch (error) { toast('Gagal menyimpan berita!', 'error'); }
 }
+
 function editBerita(id) {
   const b = adminData.berita.find(x => x.id === id); if(!b) return;
   document.getElementById('beritaEditId').value = b.id; document.getElementById('b-judul').value = b.judul; document.getElementById('b-kategori').value = b.kategori; document.getElementById('b-tanggal').value = b.tanggal; document.getElementById('b-isi').value = b.isi;
   document.getElementById('modalBeritaTitle').textContent = 'Edit Berita'; openModal('berita');
 }
-function deleteBerita(id) { if(confirm('Hapus berita ini?')) { adminData.berita = adminData.berita.filter(x => x.id !== id); updateLocalDb(); renderBeritaTable(); renderDashboard(); toast('Berita dihapus', 'info'); } }
 
+async function deleteBerita(id) { 
+  if(confirm('Hapus berita ini?')) { 
+    adminData.berita = adminData.berita.filter(x => x.id !== id); 
+    toast('Sedang menghapus...', 'info');
+    try {
+      await updateLocalDb(); 
+      renderBeritaTable(); renderDashboard(); toast('Berita dihapus', 'info'); 
+    } catch (error) { toast('Gagal menghapus!', 'error'); }
+  } 
+}
+
+// ===== KEGIATAN =====
 function renderKegiatanTable() {
   const smap = { upcoming: 'badge-gold', ongoing: 'badge-green', done: 'badge-gray' };
   const lmap = { upcoming: 'Akan Datang', ongoing: 'Berlangsung', done: 'Selesai' };
@@ -862,21 +885,40 @@ function renderKegiatanTable() {
     </tr>`).join('');
 }
 function clearKegiatanForm() { document.getElementById('kegiatanEditId').value=''; document.getElementById('k-nama').value=''; document.getElementById('k-tanggal').value=''; document.getElementById('k-waktu').value=''; document.getElementById('k-tempat').value=''; document.getElementById('k-deskripsi').value=''; document.getElementById('modalKegiatanTitle').textContent='Tambah Kegiatan'; }
-function saveKegiatan() {
+
+async function saveKegiatan() {
   const eid = document.getElementById('kegiatanEditId').value;
   const item = { id: eid ? parseInt(eid) : Date.now(), nama: document.getElementById('k-nama').value, tanggal: document.getElementById('k-tanggal').value, waktu: document.getElementById('k-waktu').value, tempat: document.getElementById('k-tempat').value, status: document.getElementById('k-status').value, deskripsi: document.getElementById('k-deskripsi').value };
+  
   if(!item.nama || !item.tanggal) return toast('Nama dan Tanggal wajib diisi!', 'error');
   if(eid) adminData.kegiatan = adminData.kegiatan.map(x => x.id === parseInt(eid) ? item : x);
   else adminData.kegiatan.push(item);
- updateLocalDb(); closeModal('kegiatan'); renderKegiatanTable(); renderDashboard(); toast('Kegiatan berhasil disimpan!', 'success');
+  
+  toast('Sedang menyimpan...', 'info');
+  try {
+    await updateLocalDb(); 
+    closeModal('kegiatan'); renderKegiatanTable(); renderDashboard(); toast('Kegiatan berhasil disimpan!', 'success');
+  } catch (error) { toast('Gagal menyimpan kegiatan!', 'error'); }
 }
+
 function editKegiatan(id) {
   const k = adminData.kegiatan.find(x => x.id === id); if(!k) return;
   document.getElementById('kegiatanEditId').value = k.id; document.getElementById('k-nama').value = k.nama; document.getElementById('k-tanggal').value = k.tanggal; document.getElementById('k-waktu').value = k.waktu; document.getElementById('k-tempat').value = k.tempat; document.getElementById('k-status').value = k.status; document.getElementById('k-deskripsi').value = k.deskripsi;
   document.getElementById('modalKegiatanTitle').textContent = 'Edit Kegiatan'; openModal('kegiatan');
 }
-function deleteKegiatan(id) { if(confirm('Hapus kegiatan ini?')) { adminData.kegiatan = adminData.kegiatan.filter(x => x.id !== id); updateLocalDb(); renderKegiatanTable(); renderDashboard(); toast('Kegiatan dihapus', 'info'); } }
 
+async function deleteKegiatan(id) { 
+  if(confirm('Hapus kegiatan ini?')) { 
+    adminData.kegiatan = adminData.kegiatan.filter(x => x.id !== id); 
+    toast('Sedang menghapus...', 'info');
+    try {
+      await updateLocalDb(); 
+      renderKegiatanTable(); renderDashboard(); toast('Kegiatan dihapus', 'info'); 
+    } catch (error) { toast('Gagal menghapus!', 'error'); }
+  } 
+}
+
+// ===== PENGURUS =====
 function renderPengurusTable() {
   document.getElementById('pengurus-tbody').innerHTML = adminData.pengurus.map(p => `
     <tr>
@@ -891,23 +933,40 @@ function renderPengurusTable() {
     </tr>`).join('');
 }
 function clearPengurusForm() { document.getElementById('pengurusEditId').value=''; document.getElementById('p-nama').value=''; document.getElementById('p-kelas').value=''; document.getElementById('p-jabatan').value=''; document.getElementById('p-instagram').value=''; document.getElementById('modalPengurusTitle').textContent='Tambah Pengurus'; }
-function savePengurus() {
+
+async function savePengurus() {
   const eid = document.getElementById('pengurusEditId').value;
   const item = { id: eid ? parseInt(eid) : Date.now(), nama: document.getElementById('p-nama').value, jabatan: document.getElementById('p-jabatan').value, kelas: document.getElementById('p-kelas').value, instagram: document.getElementById('p-instagram').value };
+  
   if(!item.nama || !item.jabatan) return toast('Nama dan Jabatan wajib diisi!', 'error');
   if(eid) adminData.pengurus = adminData.pengurus.map(x => x.id === parseInt(eid) ? item : x);
   else adminData.pengurus.push(item);
-  updateLocalDb(); closeModal('pengurus'); renderPengurusTable(); renderDashboard(); toast('Data pengurus disimpan!', 'success');
+  
+  toast('Sedang menyimpan...', 'info');
+  try {
+    await updateLocalDb(); 
+    closeModal('pengurus'); renderPengurusTable(); renderDashboard(); toast('Data pengurus disimpan!', 'success');
+  } catch (error) { toast('Gagal menyimpan pengurus!', 'error'); }
 }
+
 function editPengurus(id) {
   const p = adminData.pengurus.find(x => x.id === id); if(!p) return;
   document.getElementById('pengurusEditId').value = p.id; document.getElementById('p-nama').value = p.nama; document.getElementById('p-jabatan').value = p.jabatan; document.getElementById('p-kelas').value = p.kelas; document.getElementById('p-instagram').value = p.instagram;
   document.getElementById('modalPengurusTitle').textContent = 'Edit Pengurus'; openModal('pengurus');
 }
-// Pembatasan data sensitif: menghapus pengurus MPK jika dikonfirmasi[cite: 1]
-function deletePengurus(id) { if(confirm('Hapus pengurus ini?')) { adminData.pengurus = adminData.pengurus.filter(x => x.id !== id); updateLocalDb(); renderPengurusTable(); renderDashboard(); toast('Pengurus dihapus', 'info'); } }
 
-// ===== FITUR BARU: MANAJEMEN PELANGGARAN =====
+async function deletePengurus(id) { 
+  if(confirm('Hapus pengurus ini?')) { 
+    adminData.pengurus = adminData.pengurus.filter(x => x.id !== id); 
+    toast('Sedang menghapus...', 'info');
+    try {
+      await updateLocalDb(); 
+      renderPengurusTable(); renderDashboard(); toast('Pengurus dihapus', 'info'); 
+    } catch (error) { toast('Gagal menghapus!', 'error'); }
+  } 
+}
+
+// ===== PELANGGARAN =====
 function renderPelanggaranTable() {
   document.getElementById('pelanggaran-tbody').innerHTML = adminData.pelanggaran.map(v => `
     <tr>
@@ -924,16 +983,10 @@ function renderPelanggaranTable() {
     </tr>`).join('');
 }
 function clearPelanggaranForm() {
-  document.getElementById('pelanggaranEditId').value = '';
-  document.getElementById('v-nama').value = '';
-  document.getElementById('v-kelas').value = '';
-  document.getElementById('v-tanggal').value = '';
-  document.getElementById('v-poin').value = '';
-  document.getElementById('v-pelanggaran').value = '';
-  document.getElementById('v-keterangan').value = '';
-  document.getElementById('modalPelanggaranTitle').textContent = 'Tambah Pelanggaran Baru';
+  document.getElementById('pelanggaranEditId').value = ''; document.getElementById('v-nama').value = ''; document.getElementById('v-kelas').value = ''; document.getElementById('v-tanggal').value = ''; document.getElementById('v-poin').value = ''; document.getElementById('v-pelanggaran').value = ''; document.getElementById('v-keterangan').value = ''; document.getElementById('modalPelanggaranTitle').textContent = 'Tambah Pelanggaran Baru';
 }
-function savePelanggaran() {
+
+async function savePelanggaran() {
   const eid = document.getElementById('pelanggaranEditId').value;
   const item = {
     id: eid ? parseInt(eid) : Date.now(),
@@ -944,29 +997,32 @@ function savePelanggaran() {
     pelanggaran: document.getElementById('v-pelanggaran').value,
     keterangan: document.getElementById('v-keterangan').value
   };
-  if(!item.nama || !item.kelas || !item.pelanggaran) return toast('Nama, Kelas, dan Pelanggaran wajib diisi!', 'error');
   
+  if(!item.nama || !item.kelas || !item.pelanggaran) return toast('Nama, Kelas, dan Pelanggaran wajib diisi!', 'error');
   if(eid) adminData.pelanggaran = adminData.pelanggaran.map(x => x.id === parseInt(eid) ? item : x);
   else adminData.pelanggaran.push(item);
   
-  updateLocalDb(); closeModal('pelanggaran'); renderPelanggaranTable(); renderDashboard(); toast('Data pelanggaran diperbarui!', 'success');
+  toast('Sedang menyimpan...', 'info');
+  try {
+    await updateLocalDb(); 
+    closeModal('pelanggaran'); renderPelanggaranTable(); renderDashboard(); toast('Data pelanggaran diperbarui!', 'success');
+  } catch (error) { toast('Gagal menyimpan pelanggaran!', 'error'); }
 }
+
 function editPelanggaran(id) {
   const v = adminData.pelanggaran.find(x => x.id === id); if(!v) return;
-  document.getElementById('pelanggaranEditId').value = v.id;
-  document.getElementById('v-nama').value = v.nama;
-  document.getElementById('v-kelas').value = v.kelas;
-  document.getElementById('v-tanggal').value = v.tanggal;
-  document.getElementById('v-poin').value = v.poin;
-  document.getElementById('v-pelanggaran').value = v.pelanggaran;
-  document.getElementById('v-keterangan').value = v.keterangan;
-  document.getElementById('modalPelanggaranTitle').textContent = 'Edit Data Pelanggaran';
-  openModal('pelanggaran');
+  document.getElementById('pelanggaranEditId').value = v.id; document.getElementById('v-nama').value = v.nama; document.getElementById('v-kelas').value = v.kelas; document.getElementById('v-tanggal').value = v.tanggal; document.getElementById('v-poin').value = v.poin; document.getElementById('v-pelanggaran').value = v.pelanggaran; document.getElementById('v-keterangan').value = v.keterangan;
+  document.getElementById('modalPelanggaranTitle').textContent = 'Edit Data Pelanggaran'; openModal('pelanggaran');
 }
-function deletePelanggaran(id) {
+
+async function deletePelanggaran(id) {
   if(confirm('Hapus data pelanggaran ini?')) {
     adminData.pelanggaran = adminData.pelanggaran.filter(x => x.id !== id);
-    updateLocalDb(); renderPelanggaranTable(); renderDashboard(); toast('Data pelanggaran dihapus.', 'info');
+    toast('Sedang menghapus...', 'info');
+    try {
+      await updateLocalDb(); 
+      renderPelanggaranTable(); renderDashboard(); toast('Data pelanggaran dihapus.', 'info');
+    } catch (error) { toast('Gagal menghapus!', 'error'); }
   }
 }
 
@@ -979,7 +1035,8 @@ function loadSettingsForm() {
   document.getElementById('s-visi').value = s.visi || '';
   document.getElementById('s-misi').value = s.misi || '';
 }
-function saveSettings() {
+
+async function saveSettings() {
   adminData.pengaturan = {
     namaSekolah: document.getElementById('s-namaSekolah').value,
     namaMPK: document.getElementById('s-namaMPK').value,
@@ -987,7 +1044,12 @@ function saveSettings() {
     visi: document.getElementById('s-visi').value,
     misi: document.getElementById('s-misi').value
   };
-  updateLocalDb(); toast('Pengaturan berhasil disimpan!', 'success');
+  
+  toast('Sedang menyimpan pengaturan...', 'info');
+  try {
+    await updateLocalDb(); 
+    toast('Pengaturan berhasil disimpan!', 'success');
+  } catch (error) { toast('Gagal menyimpan pengaturan!', 'error'); }
 }
 
 // ===== TOAST INTERACTION =====
