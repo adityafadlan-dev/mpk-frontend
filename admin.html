@@ -687,9 +687,8 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// ===== INITIAL DATA IN LOCALSTORAGE =====
 // ===== KONEKSI KE BACKEND API =====
-const API_URL = 'https://mpk-backend-production.up.railway.app';
+const API_URL = 'https://mpk-backend-production.up.railway.app/api/data';
 let adminData = null;
 
 const defaultData = {
@@ -714,7 +713,7 @@ async function fetchAdminData() {
   }
 }
 
-// Menyimpan data ke server
+// Menyimpan data ke server (menggantikan updateLocalDb lama)
 async function updateLocalDb() {
   try {
     await fetch(API_URL, {
@@ -728,7 +727,24 @@ async function updateLocalDb() {
   }
 }
 
-// ===== AUTHENTICATION LAYER ===== (Modifikasi sedikit fungsi showAdmin)
+// ===== AUTHENTICATION LAYER =====
+function doLogin() {
+  const pass = document.getElementById('loginPassword').value;
+  if (pass === 'adminmpk') { 
+    sessionStorage.setItem('mpk-auth', 'true');
+    showAdmin();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').focus();
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('mpk-auth');
+  location.reload();
+}
+
 async function showAdmin() {
   document.getElementById('loginScreen').classList.add('hide');
   setTimeout(() => { document.getElementById('loginScreen').style.display = 'none'; }, 500);
@@ -746,10 +762,6 @@ async function showAdmin() {
   renderPengurusTable();
   renderPelanggaranTable();
   loadSettingsForm();
-}
-// ===== LOCAL DATABASE SYNC =====
-function updateLocalDb() {
-  localStorage.setItem('adminData', JSON.stringify(adminData));
 }
 
 // ===== THEME =====
@@ -866,7 +878,7 @@ function editKegiatan(id) {
 function deleteKegiatan(id) { if(confirm('Hapus kegiatan ini?')) { adminData.kegiatan = adminData.kegiatan.filter(x => x.id !== id); updateLocalDb(); renderKegiatanTable(); renderDashboard(); toast('Kegiatan dihapus', 'info'); } }
 
 function renderPengurusTable() {
-  document.getElementById('pengurus-tbody').innerHTML = appData.pengurus.map(p => `
+  document.getElementById('pengurus-tbody').innerHTML = adminData.pengurus.map(p => `
     <tr>
       <td style="font-weight:600">${p.nama}</td>
       <td>${p.jabatan}</td>
